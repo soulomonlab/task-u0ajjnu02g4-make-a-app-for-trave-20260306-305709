@@ -1,208 +1,173 @@
 # Travel App MVP — Design Spec
 
-## Summary
-Deliver high-fidelity, mobile-first designs and interaction flows for the Travel App MVP screens: Home/Discovery, Search, Itinerary Builder, Booking Checkout. This document defines user flows, mobile-first wireframes, component specifications, visual tokens, accessibility notes, deliverables, and a 1-week work plan for handing off to frontend.
+Created by: Maya (Designer)
+Date: 2026-03-06
+Related PRD: output/specs/travel_app_prd.md
 
-Reference: PRD created at output/specs/travel_app_prd.md (goals, acceptance criteria, success metrics).
+Summary (conclusion first)
+- Deliverable: Figma screen list, annotated wireframes, component spec, interaction notes, and open UX questions for rapid product decisions.
+- File: output/design/travel_app_mvp_design_spec.md
 
----
+1) Core ask (restated)
+- Create UI designs for the Travel App MVP to enable frontend work: screens for search, results (list + map), listing detail, booking flow (guest vs signup), checkout, confirmation, and basic profile.
 
-## Scope (MVP screens)
-- Home / Discovery (feed of curated destinations & deals)
-- Search (destination + date + passenger filters + results list + map)
-- Itinerary Builder (add/remove days, drag & drop activities, timeline)
-- Booking Checkout (review trip summary, passenger info, payment, confirmation)
+2) MECE breakdown (design workstreams)
+- A: User flows and prioritized journeys (this doc)
+- B: Screen-level wireframes and Figma screen list (this doc — ready for Figma translation)
+- C: Component spec & design tokens (colors, type, spacing)
+- D: Interaction notes (map behaviors, booking edge cases, guest checkout trade-offs)
+- E: Accessibility & responsive constraints
 
-Excluded (out of scope for MVP): multi-currency, advanced loyalty integration, deep personalization.
+3) Priority decisions made (so frontend can start)
+- MVP will support guest checkout (email required) + optional account creation post-checkout — trade-off: faster conversion vs reduced retention.
+- Search results default = list view on mobile, with prominent Map toggle; on desktop show split view (list left / map right).
+- Booking path: 3-step modal flow (Select dates & guests → Review & extras → Payment) to reduce context switches.
+- Date picker: compact month grid for mobile; allow multi-month scroll on desktop.
 
----
+4) User flows (high level)
+- Guest search flow: Home/Search → Results → Listing → Book (guest email capture) → Payment → Confirmation
+- Signed-in user flow: Home/Search → Results → Listing → Book (auto-fill) → Payment → Booking History/Profile
 
-## Constraints & Principles
-- Mobile-first, then tablet/desktop responsive.
-- Performance: low-CPU animations, lazy-loaded images.
-- Accessibility: WCAG AA baseline, tappable targets >= 44px.
-- Reusable component system (cards, list items, form elements).
-- Keep flows < 5 primary taps/screens for key tasks (search → book).
+Mermaid (flow) - convert in Figma or docs
 
-Design decisions (quick rationale)
-- Card-based feed for Discovery: fast scannability and easy progressive disclosure.
-- Bottom navigation with primary actions: Home, Search, Trips, Profile — mobile ergonomic.
-- Itinerary Builder uses drag-and-drop list + compact day chips to reduce cognitive load.
-- Checkout is a single-column vertical flow to reduce errors on mobile.
+graph LR
+  A[Home / Search] --> B[Results]
+  B --> C[Listing Detail]
+  C --> D[Booking: Dates & Guests]
+  D --> E[Review & Extras]
+  E --> F[Payment]
+  F --> G[Confirmation]
+  G --> H[Optional: Create Account]
 
----
+5) Screen list for Figma (names & purpose)
+- 01_Home_Search (mobile + desktop) — hero search, location/date/guests
+- 02_Results_List (mobile) — vertical cards with filters
+- 02_Results_MapToggle (mobile) — same screen with sticky map toggle
+- 03_Results_SplitView (desktop) — list + map
+- 04_Listing_Detail (mobile + desktop) — images carousel, price, amenities, host info
+- 05_Booking_DatesGuests (modal) — select dates & guest counts
+- 06_Booking_ReviewExtras (modal) — add-ons, refund policy
+- 07_Checkout_Payment (modal / page) — payment methods, promo code
+- 08_Confirmation (page) — booking summary, contact info
+- 09_Profile_BookingHistory — bookings list, manage bookings
+- 10_Onboarding_GuestToAccount (screen) — post-booking signup flow
 
-## Personas & Key Jobs
-- Leisure Planner (primary): ages 25–45, plans 1–2 trips/year, seeks inspiration + simple booking.
-- Business Traveler (secondary): cares about speed and confirmations.
+Wireframes (ASCII, mobile-first)
 
-Primary user goals mapped to screens:
-- Find inspiration → Home/Discovery
-- Find and filter options quickly → Search
-- Build and organize a day-by-day plan → Itinerary Builder
-- Complete booking with minimal friction → Booking Checkout
+Home / Search (mobile)
+---------------------------------
+| Logo | Search icon             |
+|-------------------------------|
+| Where are you going? [input]  |
+| Dates [input]  Guests [input] |
+| [Search button - primary]     |
+| Popular destinations (cards)   |
+---------------------------------
 
----
+Results (mobile list)
+---------------------------------
+| Top bar: back | location | map toggle |
+| Filter chips (sticky)                 |
+| Card: Image / title / price / rating  |
+| Card CTA: View / Book                 |
+---------------------------------
 
-## User Flows (high level)
-1) Discovery → Search → Result → Itinerary Builder → Checkout
-   - Home tap on destination card → Destination details modal → Start trip (calls Search)
-   - Search results tap “Add to itinerary” → choose day → added to Itinerary
-   - From Itinerary: reorder activities (drag), save, then Proceed to Book
-   - Checkout: enter passenger details → payment → confirmation
+Listing Detail (mobile)
+---------------------------------
+| Carousel images                       |
+| Title                                 |
+| Price per night                       |
+| Short amenities row                   |
+| [Book button - primary]               |
+| Host info / Reviews                   |
+---------------------------------
 
-2) Quick Book (fast path)
-   - Search results > Quick Book button → pre-filled checkout (1-screen) → confirm
+Booking modal (3-step)
+- Step 1: Dates & Guests
+  - Compact calendar, guest selector
+- Step 2: Review & Extras
+  - Show price breakdown, cancellation policy, extras toggle
+- Step 3: Payment
+  - Card input, save for later toggle, promo code
 
-Each flow includes error states (no results, payment failure), and lightweight inline help.
+6) Component spec (atomic-level)
+- Global tokens
+  - Color primary: #1E90FF (action)
+  - Accent/CTA: #FF6B6B (secondary action)
+  - Surface bg: #FFFFFF
+  - Muted text: #6B7280
+  - Radius: 8px (cards), 6px (buttons)
+  - Elevation: card shadow (0 1px 3px rgba(0,0,0,0.1))
+- Typography
+  - H1: Inter 28/36 - 700
+  - H2: Inter 20/28 - 600
+  - Body: Inter 16/24 - 400
+  - Small: Inter 14/20 - 400
+- Components
+  - Header: Back button (left), title, map toggle (right)
+  - Search bar: pill, left icon, placeholder, clear button
+  - Card: image 3:2, title, subtitle, price chip right, rating
+  - Map control: sticky FAB to center map / recenter / show filters
+  - Date picker: compact calendar popup, disabled dates greyed
+  - Guest selector: +/- buttons, labels
+  - Button Primary: filled primary color, white text
+  - Button Secondary: outlined, primary color border
 
----
+Accessibility
+- All CTAs at least 44x44 touch target
+- Contrast ratio ≥ 4.5:1 for body text, 3:1 for large headings
+- Keyboard focus states for web; aria-labels for map controls and gallery
+- Provide text alternatives for images
 
-## Wireframes (mobile-first) — ASCII sketches
-Note: these are structural wireframes for alignment. High-fidelity PNG/SVG and Figma file will follow.
+7) Interaction notes & trade-offs (map, booking, guest checkout)
+- Map interactions
+  - Mobile: default list view for faster scanning; Map toggle reveals full-screen map; tapping a map marker opens a small listing preview with CTA.
+  - Desktop: split view is default; clicking a marker highlights the list item and scrolls it into view.
+  - Performance: load coarse markers first, lazy-load cluster details on zoom.
 
-1) Home / Discovery (mobile)
-[Top nav: logo | search icon]
-[Hero carousel: curated destinations]
-[Section: Trending deals horizontal scroll (cards)]
-[Section: Categories: icon chips (Beaches, Cities, Adventure)]
-[Bottom nav: Home | Search | Trips | Profile]
+- Booking flow (modal approach)
+  - Use 3-step modal to reduce context switching and keep user on the listing page until confirmed.
+  - Show price breakdown persistently; update totals client-side when extras toggled.
 
-2) Search (mobile)
-[Back | Search input (destination) | date chip | pax chip]
-[Filters: price, duration, stops (collapsible)]
-[Results: vertical list of ResultCard — image, title, price, time, action buttons (Add / Book)]
-[Map toggle floating action button]
+- Guest checkout vs required signup (decision + recommendation)
+  - Recommendation: Allow guest checkout for MVP with required email capture before payment and an optional, frictionless account creation post-confirmation (one-tap "Create account with this email").
+  - Rationale: Improves conversion (fewer drop-offs) while still enabling follow-up and retention.
+  - Trade-offs: Without required signup you lose guaranteed history, refunds flow complexity; mitigate by sending email receipt and account creation link.
 
-3) Itinerary Builder (mobile)
-[Header: Trip Title | Edit]
-[Day chips horizontally scrollable: Day 1 | Day 2 | + Add Day]
-[Timeline list: Activity Row (time | title | location | drag handle | remove)]
-[FAB: Save / Proceed to Checkout]
+8) Edge cases and error states
+- Payment failure: show inline error, allow retry, save state of booking in local storage for 24h
+- Dates unavailable between selection and payment: verify availability at payment time; if conflict, prompt alternative dates or partial refund options
+- Map marker load failure: fallback to list-only with message
 
-4) Booking Checkout (mobile)
-[Progress indicator: Contact → Passengers → Payment → Review]
-[Form: contact fields collapsed, passenger list, add passenger button]
-[Payment: card entry or saved methods][Promo code input]
-[Price summary card sticky at bottom with Confirm & Pay CTA]
+9) Acceptance criteria (from PRD mapped to design)
+- Critical paths implemented: search → results → listing → booking → confirmation
+- Guest checkout works end-to-end with email capture
+- Map toggle and split-view behaviors implemented
+- Accessible (basic WCAG rules above)
 
-Mermaid interaction map (basic)
+10) Open UX questions (need product/backend decisions)
+- Q1: Payment methods to support for MVP? (card only, or include Apple Pay / Google Pay?)
+- Q2: Is identity verification required for certain listings (e.g., long-term stays)?
+- Q3: Retention strategy: do we want to force account creation after X bookings?
+- Q4: What refund/cancellation policies must be surfaced during booking?
+- Q5: Any legal/regulatory KYC requirements per market?
 
-flowchart LR
-  Home --> Search
-  Search --> Results
-  Results --> Itinerary
-  Itinerary --> Checkout
-  Checkout --> Confirmation
+11) Implementation notes for frontend (Kevin)
+- Prioritize components: Header, SearchBar, Card, DatePicker, Modal booking flow, Map placeholder
+- Provide alternate content for slow networks: skeleton cards, blurred image placeholders
+- Keep booking modal stateful; persist data to localStorage for 24h to recover from navigations
 
----
+12) Next steps
+- I will hand off to #ai-frontend (Kevin) to produce React components and Figma screens per the list.
+- Please review open UX questions; I recommend immediate answers for Q1 (payments) and Q4 (cancellation policy) to finalize checkout UI.
 
-## Component Specs (tokens + components)
-Design tokens (mobile baseline):
-- Colors:
-  - Primary: #0B72FF (brand action)
-  - Secondary: #00BFA6
-  - Background: #FFFFFF
-  - Surface: #F7F8FA
-  - Text primary: #0F1724
-  - Text secondary: #6B7280
-  - Error: #E02424
-- Typography:
-  - H1 (mobile): 20px / 28px / 600
-  - H2: 16px / 24px / 600
-  - Body: 14px / 20px / 400
-  - Caption: 12px / 16px / 400
-- Spacing scale: 4, 8, 12, 16, 20, 24, 32
-- Border radius: 12px for cards, 8px for buttons
+Design files created:
+- This design spec: output/design/travel_app_mvp_design_spec.md
 
-Core components (props & behavior):
-1) ResultCard
-  - Image ratio 16:9, lazy-loaded
-  - Title (H2, max 2 lines ellipsis)
-  - Subtitle (location, small)
-  - Price badge (right-aligned)
-  - Actions: Primary (Add/Book) full-width small button, Secondary icon (save)
-  - Tap area: whole card opens detail; primary action triggers booking flow
+Contact
+- Maya — #ai-design
 
-2) SearchBar
-  - Placeholder: "Where to?" with microcopy for dates/pax
-  - Autocomplete suggestions + recent searches
-  - Accessible label announced
-
-3) Day Chip
-  - Text: Day #, selectable, focus ring
-  - Overflow: + Add Day opens modal
-
-4) Activity Row (Itinerary)
-  - Drag handle on left; content: time, activity title, location; right: kebab menu
-  - Swipe left to delete (confirm undo toast)
-
-5) Bottom Price Summary
-  - Sticky footer card with breakdown rows and CTA. CTA uses Primary color, min height 56px.
-
-Animations & micro-interactions:
-- Subtle elevation (shadow) for cards on press
-- Dragging shows placeholder with slight scale and drop animation
-- Error toasts at top (red background)
-
-Accessibility notes:
-- All images have alt text generated from title + location
-- Buttons and actionable items meet contrast ratio 4.5:1
-- Keyboard navigation & screen reader labels for complex components (itinerary drag handles, day chips)
-
----
-
-## Edge Cases & Error States
-- Search no results: show suggested destinations, expand radius, and contact support CTA
-- Itinerary empty: CTA to "Add from Discovery" and template suggestions
-- Payment declined: clear inline error, retry and contact options
-
----
-
-## Assets & Deliverables (what I'll deliver in 1 week)
-- High-fidelity PNG/SVG exports for each screen (mobile 375x812) — Home, Search, Itinerary, Checkout
-- Component spec sheet (Figma components + tokens)
-- Interactive prototype (Figma link) with key flows: Search → Add to Itinerary → Checkout
-- Asset export package (icons SVG, images JPG/WEBP optimized)
-
-Placeholder Figma file: https://www.figma.com/file/<<to-be-created>>/Travel-App-MVP (I will create and share link in 48 hours)
-
----
-
-## Implementation Notes for Frontend
-- Provide exact token names and CSS variables in the Figma tokens page
-- Deliver components as React-ready atoms/molecules with states (default/hover/active/disabled)
-- Use semantic HTML equivalents: lists, buttons, forms for better accessibility
-
----
-
-## Timeline (1 week plan)
-Day 0 (today): Confirm scope and constraints (this doc)
-Day 1: Low-fidelity flows & wireframes (mobile)
-Day 2-3: High-fidelity screens (Home, Search)
-Day 4-5: High-fidelity screens (Itinerary, Checkout) + components
-Day 6: Prototype, accessibility pass, export assets
-Day 7: Final review, deliver PNG/SVG, Figma link, handoff to frontend
-
----
-
-## Open questions / Need decisions from Product
-1. Primary payment methods to support in MVP? (Card only vs. Apple Pay / Google Pay)
-2. Required analytics events on booking flow (which steps, custom properties)
-3. Any required legal copy (cancellations, T&Cs) to include in checkout?
-
----
-
-## Acceptance Criteria (design-level)
-- All four screens visually complete and exported (PNG/SVG)
-- Figma file with components & tokens published and shared
-- Prototype demonstrates the end-to-end flow
-- Component spec includes spacing, colors, typography, interaction states
-
----
-
-## Next steps (for frontend handoff)
-- I will finalize Figma file and share link by Day 2.
-- After exporting PNG/SVG and component specs, I'll hand off to #ai-frontend (Kevin) with implementation notes and token mapping.
-
+Decisions log (short)
+- Guest checkout allowed (email required) — reason: conversion
+- List default on mobile, split on desktop — reason: scan efficiency
 
