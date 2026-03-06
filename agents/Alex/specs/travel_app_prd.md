@@ -1,57 +1,52 @@
 # Feature: Travel App (MVP)
-**Goal:** Build an intuitive travel app that lets users search and book travel (flights + hotels), create and share itineraries, and discover local attractions.
-**North Star Impact:** Increase monthly active users and bookings; target 60% feature adoption for itinerary creation within 3 months of launch.
+**Goal:** Deliver a modern mobile+web travel app that lets users discover destinations, plan multi-day trips, and book flights/hotels/activities with an intuitive UX and scalable backend.
+
+**North Star Impact:** Increase active travelers and bookings via an easy end-to-end planning + booking experience; target 60% feature adoption among new users within 3 months of launch.
+
 **Users:**
-- Leisure travelers (primary): plan weekend getaways and multi-day trips.
-- Business travelers (secondary): quick booking + itinerary sync.
-- Travel discoverers (tertiary): browse attractions and curate trips.
+- Persona A: Busy professional (age 25-45) who needs fast trip planning and booking on mobile.
+- Persona B: Family planner who needs multi-day itinerary builder and sharing.
+- Persona C: Leisure traveler looking for inspiration and packaged experiences.
 
-**RICE Score:** Reach=10,000 users/quarter × Impact=2 (moderate) × Confidence=70% / Effort=8w = 1,750
-
-**Kano Category:** Performance (search & booking), Delighter (smart itineraries & sharing)
+**RICE Score:** Reach=[10,000 users/quarter] × Impact=[2 (significant)] × Confidence=[70%] / Effort=[10w] = 1,400
+**Kano Category:** Performance (core product; users will expect this to work well)
 
 **Acceptance Criteria:**
-- [ ] User can search flights and hotels by destination, dates, passenger/room count.
-- [ ] User can view search results with filters (price, rating, duration) and sort options.
-- [ ] User can book a flight or hotel end-to-end (selection → payment → confirmation).
-- [ ] User can create, edit, and share an itinerary containing bookings and saved places.
-- [ ] App shows an interactive map with saved places and directions.
-- [ ] Backend supports horizontal scaling (stateless APIs, DB read replicas) and rate limiting.
-- [ ] API latency: 95th percentile < 300ms for search endpoints under expected load.
-- [ ] Edge cases: payment failures → clear error and retry; partial booking rollback ensured.
+- [ ] Users can create an account and sign in (email + OAuth Google/Apple).
+- [ ] Users can search for destinations, flights, hotels, and activities with filters.
+- [ ] Users can build a trip (multi-day itinerary): add days, drag/drop activities, set travel dates.
+- [ ] Users can book flights and hotels end-to-end (MVP: integrate with a marketplace API or mocked payment flow).
+- [ ] Users can save/share itineraries via link (view-only) and invite collaborators (edit).
+- [ ] Core APIs scale to 10k DAU with <200ms median response for search endpoints under normal load; system handles eventual consistency for inventory.
+- [ ] Basic offline resilience on mobile: cached itinerary and last-searched results.
+- [ ] Security: user payment details are not stored on our servers (use tokenization / 3rd-party) and auth tokens expire within 30 days.
 
-**Out of Scope (MVP):**
-- Native mobile offline sync (post-MVP)
-- Loyalty programs, complex fare rules, multi-airline PNR merges
-- Deep personalization/ML recommendations (phase 2)
+**Edge cases / Non-functional:**
+- Handle partial failures from upstream booking APIs with clear user messaging and recovery flows.
+- Rate-limiting for abusive clients / bots.
+- GDPR data deletion flow for user accounts.
 
-**Success Metrics:**
-- Bookings per MAU (target: 2% conversion within 90 days)
-- Itinerary creation adoption (target: 60% of active users)
-- API error rate < 0.5% and average response time < 250ms
+**Out of Scope:**
+- Enterprise/group/corporate travel features.
+- Multi-currency complex reconciliation (initial MVP: USD only, extensible later).
+- Deep integrations with airline/hotel GDSes (we'll use partner APIs/marketplaces first).
 
-**MECE Breakdown (workstreams & owners):**
-1) Product & Spec (Alex) — finalize PRD, success metrics, acceptance criteria (this file).
-2) UX & Visual Design (Maya) — wireframes, clickable prototypes, design system tokens.
-3) Frontend (Kevin) — React web app, components for search, results, booking flow, itinerary UI.
-4) Backend (Marcus) — Search & booking APIs, payment integration, DB schema, scalability.
-5) QA (Dana) — Test plan, E2E tests, performance tests, acceptance gate.
+**Success Metrics (first 3 months):**
+- MAU >= 10,000; DAU/MAU ratio >= 20%
+- Booking conversion rate from trip plan >= 5%
+- Feature adoption: 60% of new users create at least one trip within 14 days
+- NPS / CSAT >= 80%
+- API SLO: median response time <200ms for search; error rate <1%
 
-**Owner assignments:**
-- Maya (#ai-design): UX flows, high-fidelity screens, responsive spec.
-- Kevin (#ai-frontend): Implement UI components and integrate with API stubs.
-- Marcus (#ai-backend): Implement APIs, DB schema, auth, payment gateway.
-- Dana (#ai-qa): Provide test cases and acceptance checklist; run load tests.
+**Implementation notes / constraints:**
+- Mobile-first UX (React Native) + responsive web (React).
+- Backend: microservices for search, booking orchestration, user profiles; stateless services + managed DB (Postgres) and Redis cache.
+- Use third-party payment tokenization (Stripe) for MVP.
+- Log key events for analytics (searches, itinerary saves, bookings) to enable growth experiments.
 
-**Implementation notes & constraints:**
-- Use third-party inventory APIs for flights/hotels initially (rev-share or metasearch).
-- Payment: integrate Stripe for MVP (PCI SAQ-A scoped flow).
-- User accounts: email + social login (optional for MVP but preferred).
+**Next steps:**
+1. Design: wireframes + UX flows for core screens (home/discovery, search, itinerary builder, booking flow).
+2. Backend: API spec for search, trip, booking orchestration, and auth.
+3. Frontend: component library and screen implementations (mobile + web).
 
-**Roadmap (MVP → +3 months):**
-- Week 0-2: Design + API contract
-- Week 3-6: Frontend + Backend development (core flows)
-- Week 7-8: QA, load tests, bug fixes
-- Week 9: Beta launch to 1,000 users
-
-**GitHub Issue:** see created issue reference in Alex's Slack handoff message.
+**GitHub Issue:** TBD
