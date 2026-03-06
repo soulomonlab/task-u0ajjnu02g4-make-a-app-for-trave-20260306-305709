@@ -1,0 +1,25 @@
+version: '3.8'
+services:
+  frontend:
+    build: .
+    ports:
+      - '3000:80'
+    depends_on:
+      - backend
+  backend:
+    image: ghcr.io/soulomonlab/travel-app-backend:latest
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SECRET_KEY=${SECRET_KEY}
+    ports:
+      - '8000:8000'
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - '9090:9090'
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '3001:3000'
