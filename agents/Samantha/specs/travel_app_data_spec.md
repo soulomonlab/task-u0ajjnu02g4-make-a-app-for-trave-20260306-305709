@@ -1,106 +1,135 @@
-# Travel App — Data & Analytics Spec (MVP)
+# Travel App — Data & Tracking Specification
 
 ## Situation
-PRD for Travel App MVP completed (output/specs/travel_app_prd.md). Designs are next — product needs a clear data contract and analytics plan to guide UX decisions (guest checkout, booking flows, map interactions).
+The Travel App PRD and epic for the MVP are ready. Design will produce wireframes for Home/Discovery, Search, Itinerary Builder, and Booking Checkout. We must ensure the product is instrumented and the data platform can support analytics, ML, and monitoring prior to frontend/backend builds.
 
-## Purpose
-Provide the event taxonomy, payload schema, data pipeline design, metrics & acceptance criteria required by Design, Frontend, Backend, and Analytics teams so UX trade-offs can be evaluated and implemented without repeated back-and-forth.
+## Complication
+Design-first approach means frontend will be implemented against prototypes; without a clear data contract and event schema we risk rework, missing metrics, and inconsistent instrumentation across mobile/web.
 
-## High-level decisions (made now)
-- Use event-driven instrumentation: frontend posts JSON events to a single ingest endpoint (POST /api/v1/events).
-- user_id is nullable: allow anonymous (guest) flows; require anonymous_id + session_id for attribution.
-- Do NOT include raw PII (email, phone) in event payloads. Booking events reference booking_id which the backend maps to PII in a secure service.
-- Raw events retained 90 days; aggregated/warehouse models retained 2+ years.
-- Warehouse: BigQuery (preferred) or Snowflake. Transform layer: dbt.
+## Resolution (deliverable)
+I created a data & tracking specification and sample analytics SQL to unblock backend and analytics work:
+- Data model: event-driven analytics (central `events` table), partitioned and clustered for performance.
+- Tracking plan: canonical event names + required properties for Home/Discovery, Search, Itinerary Builder, Booking Checkout.
+- Data governance: PII handling, retention, schema versioning, QA checks, monitoring.
 
-## Event taxonomy (core events)
-- page_view
-- search_submit
-- search_results_view
-- product_select (flight_select / hotel_select)
-- add_to_cart
-- checkout_start
-- guest_checkout_start
-- signup_start
-- signup_complete
-- login
-- payment_attempt
-- booking_complete
-- booking_cancel
-- payment_failure
-- map_interaction (subtypes: pan, zoom, select, cluster_expand)
-- promotion_view
-- promotion_click
-- error
+Files created:
+- output/specs/travel_app_data_spec.md
+- output/code/data/travel_app_analytics.sql
 
-## Event payload (required fields)
-All events must include the following base fields:
-- event_name (string)
-- timestamp (ISO 8601 UTC)
-- anonymous_id (string) — client-generated UUID for anonymous users
-- session_id (string)
-- user_id (string|null) — internal user id once authenticated
-- platform (web|ios|android)
-- app_version
-- locale
-- currency
+---
 
-Common optional fields (depending on event):
-- search: origin, destination, depart_date, return_date, pax_adults, pax_children, cabin_class
-- product_select: product_type (flight|hotel), product_id, price, currency, fare_class
-- checkout_start / guest_checkout_start: cart_id, cart_value, guest_email_collected (bool)
-- booking_complete: booking_id (opaque), booking_value, payment_method, booking_source (web|app)
-- map_interaction: map_event (pan|zoom|select), bbox (lat/lon box), center, zoom_level, result_count
-- error: error_code, error_message, stacktrace (truncated)
+## Core ask (restated)
+Provide a clear, implementable data contract and analytics queries so backend (Marcus) can instrument events and data engineering (Samantha) can ingest, transform, and expose datasets to frontend, ML, and growth.
 
-PII handling
-- Do NOT send emails, phone numbers, or payment details in events.
-- If guest email is absolutely required for UX (e.g., to send e-ticket), send it to backend via a separate secure API that returns booking_id; only booking_id is included in analytics events.
-- Backend must store PII in a secure vault; analytics maps booking_id → non-PII attributes only.
+## MECE breakdown (assigned owners)
+1) Event definitions & tracking plan — Samantha (Data Engineer) [this file]
+2) Backend event emission & API hooks — Marcus (Backend) — NEXT HANDOFF
+3) Frontend event mapping & sample SDK calls — Kevin (Frontend)
+4) Data ingestion, ETL/ELT, and monitoring — Samantha (Data Engineer)
+5) ML dataset exports & labeling pipeline — Lisa (ML) (not started until events available)
 
-## Metrics & Reports (MVP)
-- Funnel: search_submit → product_select → checkout_start → booking_complete (overall & by platform)
-- Guest vs Signed-up conversion: compare booking conversion rates for guest_checkout_start vs signup_complete flows
-- Map engagement: map_interaction events / session, avg zoom_level, conversions coming from map searches
-- Revenue: bookings per day, ARPU
-- Error rate: payment_failure rate, % of sessions with an error
+## Decisions made (so they are explicit)
+- Warehouse: BigQuery chosen (reason: streaming ingestion, partitioned tables, low ops). This is reversible; Snowflake is an alternative if infra prefers it. (Trade-off: Snowflake has different streaming semantics.)
+- Event model vs. many normalized tables: pick event model for mobile-first, flexible product metrics and ML features.
+- PII: do not store raw emails/phone numbers in events. Send hashed/pseudonymized values only when necessary.
 
-## Acceptance criteria (for instrumentation & pipeline)
-1. End-to-end event ingestion working for all core events in staging: frontend → ingest endpoint → raw events storage → transformed table in warehouse.
-2. Example dashboards available: funnel conversion + guest-vs-signed conversion + map engagement.
-3. Missing required fields alert: if >1% of events are missing required base fields for 24h, a pager alert triggers.
-4. No raw PII present in analytics tables.
+## Event taxonomy (canonical names + required properties)
+Each event includes these base properties (required):
+- event_name (STRING)
+- event_timestamp (TIMESTAMP)
+- user_id (STRING, nullable) — internal user id when logged in
+- anon_id (STRING) — UUID for anonymous sessions
+- platform (STRING) — 'ios' | 'android' | 'web'
+- app_version (STRING)
+- session_id (STRING)
+- locale (STRING)
+- device_info (RECORD) — os, model
+- experiment_id (STRING, nullable)
+- metadata (RECORD, nullable) — free-form JSON
 
-## Data pipeline (overview)
-- Source: Frontend apps (web, iOS, Android) post to ingest endpoint or use Segment.
-- Ingest: API writes raw JSON to object store (GCS/S3) partitioned by date and platform.
-- Load: Streaming or batched load into raw_events table in BigQuery.
-- Transform: dbt models to produce analytics.tables: events_staged, events_canonical, bookings_summary, funnel_aggregates.
-- Consumption: Looker/Metabase dashboards and export for ML team.
+Domain events (examples + required properties):
+1) discovery_view
+   - context: home | category | curated
+   - items_shown: ARRAY<STRING> (ids)
 
-Operational requirements
-- Schema registry for events (versioned). Any new required field must be announced.
-- Validation: lightweight schema validation at ingest (reject/flag malformed). Store raw rejected events for inspection.
-- Monitoring: count per event, missing_fields_pct, pipeline latency, failed loads.
+2) discovery_card_impression
+   - card_id
+   - rank
+   - section
 
-Estimated volume & cost
-- MVP estimate: 100k events/day (~3M/month). Typical event size 1KB → 3GB/month raw. Scales linearly with users.
+3) search_initiated
+   - query_text
+   - origin (home | search_page)
+   - filters (RECORD)
 
-Open UX questions for Design (please answer)
-1. Guest checkout: Do we require email at time of booking or allow a pure guest flow where we ask email after booking (e.g., on confirmation page)?
-   - If email required at booking, analytics needs to capture guest_email_collected flag and an explicit mapping flow to booking_id.
-2. Signup friction: Should we offer social login or passwordless email link? Each has different analytics needs (oauth provider, token flow success).
-3. Map behavior: Should map selections open a detail modal (counts as product_select) or navigate to search results? Define expected user path so instrumentation can track conversion attribution.
+4) search_result_clicked
+   - query_text
+   - result_id
+   - position
 
-Next steps / responsibilities
-- Backend (Marcus): implement ingest endpoint + persistent storage for raw events; ensure no PII in events and booking_id mapping.
-- Frontend (Kevin): implement event emission per taxonomy and include anonymous_id/session_id generation.
-- Design (Maya): confirm UX answers above and indicate where email is collected or signup gate exists.
-- Data (Samantha): implement ingestion pipeline and dbt models; produce dashboards.
+5) itinerary_created
+   - itinerary_id
+   - source (search | suggestion | import)
 
-Contacts
-- Data: Samantha (this doc owner)
-- Backend: Marcus
-- Frontend: Kevin
-- Product: Alex
+6) itinerary_item_added
+   - itinerary_id
+   - item_type (flight | hotel | activity)
+   - item_id
+   - price_local
+   - currency
+
+7) booking_initiated
+   - itinerary_id
+   - total_price_local
+   - currency
+
+8) booking_payment_success
+   - booking_id
+   - itinerary_id
+   - payment_method (card | apple_pay | google_pay)
+   - revenue_local
+   - currency
+
+9) booking_payment_failed
+   - booking_id (nullable)
+   - error_code
+   - error_message (truncate)
+
+Instrument additional technical events: session_start, session_end, app_crash, network_error.
+
+## Data model (high level)
+- Raw events ingestion: all events streamed into `raw.events_{YYYYMMDD}` or `events_raw` (partitioned) with append-only write.
+- Core analytics view: `analytics.events` (cleaned, typed, enriched: geo, currency normalization, attach user_profile_id)
+- Aggregates & marts: `analytics.metrics_*` (DAU, funnels, booking_revenue)
+- ML dataset exports: `ml.user_behavior_features` (pre-aggregated windows)
+
+Table design notes (BigQuery):
+- Use ingestion-time partitioning: PARTITION BY DATE(event_timestamp)
+- Cluster by user_id, event_name for faster filtering
+- Use schema versioning: event_schema_version in root record
+
+## ETL & quality checks
+- Required checks on each batch/stream: schema conformance, null rates for required fields, event volume delta (alerts if >50% drop), late arrival rate.
+- Implement Great Expectations or custom SQL-based checks; alert to Slack + PagerDuty on P0 failures.
+
+## Privacy & retention
+- PII: do not transmit raw PII fields. If necessary, send sha256(email) and mark as pseudonymized.
+- Retention: 365 days default; aggregated metrics older than 3 years can be archived.
+
+## Acceptance criteria (how we'll know it's done)
+1) Backend emits the canonical events for the four flows (Home, Search, Itinerary, Booking) with required properties.
+2) A streaming ingestion pipeline is writing to BigQuery (or equivalent) into partitioned `events` dataset.
+3) Basic QA checks pass on first week's data (schema conformance, row counts >0, user_id mapping present when logged in).
+4) Example analytics queries (DAU, funnels) run within SLAs (expected <5s on sample data)
+
+## Next steps & owners
+- Marcus (#ai-backend) — implement server-side event emission and streaming to the warehouse. See handoff.
+- Kevin (#ai-frontend) — implement frontend SDK calls for events using the canonical event names and properties in this doc.
+- Noah (#ai-devops) — provide credentials + secure ingestion path to BigQuery and verify network configuration.
+- Samantha (Data) — build ingestion jobs, transform to `analytics.events`, and create dashboards.
+
+## Notes & gotchas
+- Ensure both user_id and anon_id are always emitted for sessions started anonymously then converted to logged-in state.
+- Timezones: store event_timestamp in UTC; provide event_date derived field for partitioning.
+- Currency normalization: store local currency and a normalized USD amount in analytics layer.
 
