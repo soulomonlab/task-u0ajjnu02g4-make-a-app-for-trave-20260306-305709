@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: Travel App API
+  version: 1.0.0
+  description: OpenAPI spec for Travel App MVP — listings, booking, checkout, auth. Designed for guest checkout support and frontend integration.
+servers:
+  - url: https://api.travelapp.example.com
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    pageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    sizeParam:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+  schemas:
+    Listing:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [hotel, flight]
+        title:
+          type: string
+        location:
+          type: object
+          properties:
+            lat: { type: number }
+            lon: { type: number }
+            address: { type: string }
+        price: { type: number }
+        currency: { type: string }
+    BookingRequest:
+      type: object
+      required: [listing_id, payment_method]
+      properties:
+        listing_id: { type: string }
+        check_in: { type: string, format: date }
+        check_out: { type: string, format: date }
+        guests: { type: integer, default: 1 }
+        guest_checkout:
+          type: boolean
+          description: "If true, allow booking without authenticated user. Email is required in that case."
+        email:
+          type: string
+          format: email
+        payment_method:
+          type: string
+        meta: { type: object }
+    BookingResponse:
+      type: object
+      properties:
+        booking_id: { type: string }
+        status: { type: string }
+        booking_token: { type: string }
+    Error:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: Login (returns access + refresh tokens)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh tokens
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: new tokens
+  /api/v1/listings:
+    get:
+      summary: List listings (hotels/flights)
+      parameters:
+        - $ref: '#/components/parameters/pageParam'
+        - $ref: '#/components/parameters/sizeParam'
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: search query
+        - name: lat
+          in: query
+          schema: { type: number }
+        - name: lon
+          in: query
+          schema: { type: number }
+      responses:
+        '200':
+          description: paginated listings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Listing' }
+                  page: { type: integer }
+                  size: { type: integer }
+                  total: { type: integer }
+  /api/v1/listings/{id}:
+    get:
+      summary: Get listing by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: listing
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Listing' }
+        '404':
+          description: not found
+  /api/v1/bookings:
+    post:
+      summary: Create booking (supports guest checkout)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Idempotency key for safe retries
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookingRequest' }
+      responses:
+        '201':
+          description: booking created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookingResponse' }
+        '400':
+          description: validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /api/v1/bookings/{id}:
+    get:
+      summary: Get booking
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: booking object
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id: { type: string }
+                  status: { type: string }
+                  listing: { $ref: '#/components/schemas/Listing' }
+        '403':
+          description: forbidden (booking belongs to another user)
+        '404':
+          description: not found
+security: []
